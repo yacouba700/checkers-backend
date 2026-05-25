@@ -43,20 +43,22 @@ io.on("connection", (socket) => {
   // =========================
   // CREATE ROOM
   // =========================
-  socket.on("create_room", (callback) => {
-    const roomId = Math.random().toString(36).substring(2, 8);
+  socket.on("create_room", () => {
+  const roomId = Math.random().toString(36).substring(2, 8);
 
-    rooms[roomId] = {
-      roomId,
-      players: [],
-      status: "waiting"
-    };
+  rooms[roomId] = {
+    roomId,
+    players: [],
+    status: "waiting"
+  };
 
-    callback({
-      success: true,
-      roomId
-    });
+  socket.emit("room_created", {
+    success: true,
+    roomId
   });
+
+  console.log("Room created:", roomId);
+});
 
   // =========================
   // JOIN ROOM
