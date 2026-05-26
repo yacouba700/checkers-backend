@@ -92,12 +92,21 @@ io.on("connection", (socket) => {
 
 
 
-
   socket.on("add_balance", async (data, callback) => {
 
   try {
 
-    const { userId, amount } = data;
+    const { id: userId, amount } = data; // 🔥 FIX ICI
+
+    console.log("DATA REÇUE:", data);
+    console.log("USER ID:", userId);
+
+    if (!userId) {
+      return callback({
+        success: false,
+        message: "userId manquant"
+      });
+    }
 
     if (amount <= 0) {
       return callback({
@@ -106,16 +115,15 @@ io.on("connection", (socket) => {
       });
     }
 
-    const { data: user, error: userError } = await supabase
+    const { data: user, error } = await supabase
       .from("users")
       .select("*")
       .eq("id", userId)
       .maybeSingle();
-    console.log("USER ID REÇU:", userId);
-    console.log("SUPABASE RESPONSE:", user, userError);
-    
 
-    if (userError || !user) {
+    console.log("USER FOUND:", user, error);
+
+    if (!user) {
       return callback({
         success: false,
         message: "Utilisateur introuvable"
@@ -123,51 +131,48 @@ io.on("connection", (socket) => {
     }
 
     const newBalance = user.balance + amount;
-
     const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        balance: newBalance
-      })
-      .eq("id", userId);
+  .from("users")
+  .update({ balance: newBalance })
+  .eq("id", userId);
 
-    if (updateError) {
-      return callback({
-        success: false,
-        message: updateError.message
-      });
-    }
+if (updateError) {
+  return callback({
+    success: false,
+    message: updateError.message
+  });
+}
+
+    await supabase
+      .from("users")
+      .update({ balance: newBalance })
+      .eq("id", userId);
 
     await supabase
       .from("transactions")
-      .insert([
-        {
-          user_id: userId,
-          type: "deposit",
-          amount,
-          balance_before: user.balance,
-          balance_after: newBalance,
-          description: "Recharge wallet"
-        }
-      ]);
+      .insert([{
+        user_id: userId,
+        type: "deposit",
+        amount,
+        balance_before: user.balance,
+        balance_after: newBalance,
+        description: "Recharge wallet"
+      }]);
 
     callback({
       success: true,
       balance: newBalance
     });
 
-    console.log("Balance added:", amount);
-
   } catch (err) {
-
     callback({
       success: false,
       message: err.message
     });
-
   }
 
 });
+  
 
   //====≠=================
   //GET_BALANCE
