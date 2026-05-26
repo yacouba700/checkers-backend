@@ -110,7 +110,10 @@ io.on("connection", (socket) => {
       .from("users")
       .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
+    console.log("USER ID REÇU:", userId);
+    console.log("SUPABASE RESPONSE:", user, userError);
+    
 
     if (userError || !user) {
       return callback({
