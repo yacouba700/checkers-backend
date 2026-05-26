@@ -43,7 +43,7 @@ io.on("connection", (socket) => {
   // =========================
   // CREATE ROOM
   // =========================
-  socket.on("create_room", () => {
+  socket.on("create_room", (callback) => {
   const roomId = Math.random().toString(36).substring(2, 8);
 
   rooms[roomId] = {
@@ -52,7 +52,7 @@ io.on("connection", (socket) => {
     status: "waiting"
   };
 
-  socket.emit("room_created", {
+  callback("room_created", {
     success: true,
     roomId
   });
