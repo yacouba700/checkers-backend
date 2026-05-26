@@ -96,7 +96,7 @@ io.on("connection", (socket) => {
 
   try {
 
-    const { id: userId, amount } = data; // 🔥 FIX ICI
+    const { id: userId, amount } = data;
 
     console.log("DATA REÇUE:", data);
     console.log("USER ID:", userId);
@@ -123,7 +123,7 @@ io.on("connection", (socket) => {
 
     console.log("USER FOUND:", user, error);
 
-    if (!user) {
+    if (error || !user) {
       return callback({
         success: false,
         message: "Utilisateur introuvable"
@@ -131,22 +131,18 @@ io.on("connection", (socket) => {
     }
 
     const newBalance = user.balance + amount;
+
     const { error: updateError } = await supabase
-  .from("users")
-  .update({ balance: newBalance })
-  .eq("id", userId);
-
-if (updateError) {
-  return callback({
-    success: false,
-    message: updateError.message
-  });
-}
-
-    await supabase
       .from("users")
       .update({ balance: newBalance })
       .eq("id", userId);
+
+    if (updateError) {
+      return callback({
+        success: false,
+        message: updateError.message
+      });
+    }
 
     await supabase
       .from("transactions")
