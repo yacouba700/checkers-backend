@@ -83,6 +83,86 @@ io.on("connection", (socket) => {
 
   console.log("User created:", username);
 });
+  
+  // =========================
+  // ADD_BALANCE
+  // =========================
+
+
+
+
+  socket.on("add_balance", async (data, callback) => {
+
+  try {
+
+    const { userId, amount } = data;
+
+    if (amount <= 0) {
+      return callback({
+        success: false,
+        message: "Montant invalide"
+      });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (userError || !user) {
+      return callback({
+        success: false,
+        message: "Utilisateur introuvable"
+      });
+    }
+
+    const newBalance = user.balance + amount;
+
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        balance: newBalance
+      })
+      .eq("id", userId);
+
+    if (updateError) {
+      return callback({
+        success: false,
+        message: updateError.message
+      });
+    }
+
+    await supabase
+      .from("transactions")
+      .insert([
+        {
+          user_id: userId,
+          type: "deposit",
+          amount,
+          balance_before: user.balance,
+          balance_after: newBalance,
+          description: "Recharge wallet"
+        }
+      ]);
+
+    callback({
+      success: true,
+      balance: newBalance
+    });
+
+    console.log("Balance added:", amount);
+
+  } catch (err) {
+
+    callback({
+      success: false,
+      message: err.message
+    });
+
+  }
+
+});
 
   // =========================
   // CREATE ROOM
