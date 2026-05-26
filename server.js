@@ -96,10 +96,12 @@ io.on("connection", (socket) => {
 
   try {
 
-    const { id: userId, amount } = data;
+    console.log("RAW DATA:", data);
 
-    console.log("DATA REÇUE:", data);
-    console.log("USER ID:", userId);
+    const userId = data.userId || data.id || data.user_id;
+    const amount = data.amount;
+
+    console.log("RESOLVED USER ID:", userId);
 
     if (!userId) {
       return callback({
@@ -108,7 +110,7 @@ io.on("connection", (socket) => {
       });
     }
 
-    if (amount <= 0) {
+    if (!amount || amount <= 0) {
       return callback({
         success: false,
         message: "Montant invalide"
@@ -120,8 +122,6 @@ io.on("connection", (socket) => {
       .select("*")
       .eq("id", userId)
       .maybeSingle();
-
-    console.log("USER FOUND:", user, error);
 
     if (error || !user) {
       return callback({
