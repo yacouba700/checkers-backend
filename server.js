@@ -112,7 +112,31 @@ io.on("connection", (socket) => {
   }
 
 });
-  
+
+  //====≠=================
+  //GET_BALANCE
+  //=========================
+  socket.on("get_balance", async (userId, callback) => {
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    return callback({
+      success: false,
+      message: error.message
+    });
+  }
+
+  callback({
+    success: true,
+    balance: data.balance
+  });
+
+});
 
   // =========================
   // CREATE USER
