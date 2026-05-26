@@ -63,56 +63,71 @@ io.on("connection", (socket) => {
   // =========================
   // JOIN ROOM
   // =========================
-  socket.on("join_room", (roomId, callback) => {
-    const room = rooms[roomId];
-    const user = users[socket.id];
+  socket.on("join_room", (roomId) => {
+  const room = rooms[roomId];
+  const user = users[socket.id];
 
-    if (!room) {
-      return callback({ success: false, message: "Room inexistante" });
-    }
-
-    if (!user) {
-      return callback({ success: false, message: "Utilisateur non créé" });
-    }
-
-    if (room.players.length >= 2) {
-      return callback({ success: false, message: "Room pleine" });
-    }
-
-    room.players.push(socket.id);
-    user.roomId = roomId;
-
-    socket.join(roomId);
-
-    io.to(roomId).emit("user_joined", {
-      userId: socket.id,
-      username: user.username
+  if (!room) {
+    return socket.emit("room_error", {
+      success: false,
+      message: "Room inexistante"
     });
+  }
 
-    callback({
-      success: true,
-      roomId,
-      players: room.players
+  if (!user) {
+    return socket.emit("room_error", {
+      success: false,
+      message: "Utilisateur non créé"
     });
+  }
 
-    if (room.players.length === 2) {
-      room.status = "ready";
+  if (room.players.length >= 2) {
+    return socket.emit("room_error", {
+      success: false,
+      message: "Room pleine"
+    });
+  }
 
-      io.to(roomId).emit("room_ready", {
-        message: "Les deux joueurs sont connectés"
-      });
-    }
+  room.players.push(socket.id);
+  user.roomId = roomId;
+
+  socket.join(roomId);
+
+  socket.emit("room_joined", {
+    success: true,
+    roomId
   });
 
+  io.to(roomId).emit("user_joined", {
+    username: user.username
+  });
+
+  console.log(user.username, "joined room", roomId);
+
+  if (room.players.length === 2) {
+    io.to(roomId).emit("room_ready", {
+      message: "2 joueurs connectés"
+    });
+  }
+});
+
+
+  
   // =========================
   // GAME EVENT (TEST)
   // =========================
   socket.on("game_event", (data) => {
-    const user = users[socket.id];
-    if (!user?.roomId) return;
+  console.log("GAME EVENT:", data);
 
-    io.to(user.roomId).emit("game_update", data);
-  });
+  const user = users[socket.id];
+
+  if (!user?.roomId) {
+    console.log("User not in room");
+    return;
+  }
+
+  io.to(user.roomId).emit("game_update", data);
+});
 
   // =========================
   // DISCONNECT
