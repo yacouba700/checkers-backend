@@ -128,6 +128,7 @@ io.on("connection", (socket) => {
   }
 
   io.to(user.roomId).emit("game_update", data);
+  console.log("game_update", data);
 });
 
   // =========================
