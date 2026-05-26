@@ -86,6 +86,7 @@ io.on("connection", (socket) => {
       success: false,
       message: "Room pleine"
     });
+    console.log("rom pleine");
   }
 
   room.players.push(socket.id);
