@@ -52,8 +52,9 @@ io.on("connection", (socket) => {
     status: "waiting"
   };
 
-  callback("room_created", {
+  callback({
     success: true,
+    message: "room_created",
     roomId
   });
 
