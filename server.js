@@ -99,7 +99,7 @@ io.on("connection", (socket) => {
     const { id: userId, amount } = data;
 
     console.log("DATA REÇUE:", data);
-    console.log("USER ID:", userId);
+    console.log("USER ID:", userId, id);
 
     if (!userId) {
       return callback({
