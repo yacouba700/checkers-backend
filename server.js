@@ -34,6 +34,59 @@ io.on("connection", (socket) => {
 
   
   // =========================
+  // CREATE USER
+  // =========================
+  socket.on("create_user", async (username, callback) => {
+
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username)
+    .single();
+
+  if (existingUser) {
+    return callback({
+      success: true,
+      user: existingUser
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .insert([
+      {
+        username,
+        balance: 0
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    return callback({
+      success: false,
+      error: error.message
+    });
+  }
+
+  users[socket.id] = {
+    socketId: socket.id,
+    userId: data.id,
+    username: data.username,
+    balance: data.balance,
+    roomId: null
+  };
+
+  callback({
+    success: true,
+    user: data
+  });
+
+  console.log("User created:", username);
+});
+
+  
+  // =========================
   // ADD_BALANCE
   // =========================
 
@@ -138,57 +191,6 @@ io.on("connection", (socket) => {
 
 });
 
-  // =========================
-  // CREATE USER
-  // =========================
-  socket.on("create_user", async (username, callback) => {
-
-  const { data: existingUser } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", username)
-    .single();
-
-  if (existingUser) {
-    return callback({
-      success: true,
-      user: existingUser
-    });
-  }
-
-  const { data, error } = await supabase
-    .from("users")
-    .insert([
-      {
-        username,
-        balance: 0
-      }
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    return callback({
-      success: false,
-      error: error.message
-    });
-  }
-
-  users[socket.id] = {
-    socketId: socket.id,
-    userId: data.id,
-    username: data.username,
-    balance: data.balance,
-    roomId: null
-  };
-
-  callback({
-    success: true,
-    user: data
-  });
-
-  console.log("User created:", username);
-});
   
   // =========================
   // CREATE ROOM
