@@ -108,6 +108,7 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("room_ready", {
       message: "2 joueurs connectés"
     });
+    console.log("deux joueurs connecter", roomId);
   }
 });
 
