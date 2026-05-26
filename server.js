@@ -25,9 +25,11 @@ const io = new Server(server, {
   }
 });
 
+
 // Stockage en mémoire (temporaire étape 1)
 const users = {};
 const rooms = {};
+const bets = {};
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -193,6 +195,142 @@ io.on("connection", (socket) => {
     balance: data.balance
   });
 
+});
+
+  // =========================
+  // CREATE BET
+  // =========================
+
+  socket.on("create_bet", async (data, callback) => {
+
+  const { userId, amount, roomId } = data;
+
+  if (!userId || amount <= 0) {
+    return callback({ success: false, message: "Données invalides" });
+  }
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!user || user.balance < amount) {
+    return callback({ success: false, message: "Solde insuffisant" });
+  }
+
+  const betId = Math.random().toString(36).substring(2, 9);
+
+  bets[betId] = {
+    betId,
+    creator: userId,
+    amount,
+    roomId,
+    status: "waiting",
+    players: [userId]
+  };
+
+  // BLOQUER ARGENT
+  const newBalance = user.balance - amount;
+
+  await supabase
+    .from("users")
+    .update({ balance: newBalance })
+    .eq("id", userId);
+
+  socket.emit("bet_created", {
+    success: true,
+    betId,
+    amount
+  });
+
+  console.log("BET CREATED:", betId);
+});
+
+
+  // =========================
+  // JOIN BET
+  // =========================
+  
+  socket.on("join_bet", async (data, callback) => {
+
+  const { userId, betId } = data;
+
+  const bet = bets[betId];
+
+  if (!bet || bet.status !== "waiting") {
+    return callback({ success: false, message: "Bet invalide" });
+  }
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!user || user.balance < bet.amount) {
+    return callback({ success: false, message: "Solde insuffisant" });
+  }
+
+  // BLOQUER ARGENT 2e joueur
+  const newBalance = user.balance - bet.amount;
+
+  await supabase
+    .from("users")
+    .update({ balance: newBalance })
+    .eq("id", userId);
+
+  bet.players.push(userId);
+  bet.status = "ready";
+
+  socket.emit("bet_joined", {
+    success: true,
+    betId
+  });
+
+  console.log("BET JOINED:", betId);
+});
+
+  
+  // =========================
+  // RESOLVE BET (GAGNANT)
+  // =========================
+  
+  socket.on("resolve_bet", async (data) => {
+
+  const { betId, winnerId } = data;
+
+  const bet = bets[betId];
+
+  if (!bet || bet.status !== "ready") return;
+
+  const total = bet.amount * 2;
+
+  const winnerGain = total * 0.95;
+  const commission = total * 0.05;
+
+  const { data: winner } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", winnerId)
+    .maybeSingle();
+
+  const newBalance = winner.balance + winnerGain;
+
+  await supabase
+    .from("users")
+    .update({ balance: newBalance })
+    .eq("id", winnerId);
+
+  bet.status = "finished";
+
+  io.to(bet.roomId).emit("bet_finished", {
+    winnerId,
+    winnerGain,
+    commission
+  });
+
+  console.log("BET FINISHED:", betId);
 });
 
   
