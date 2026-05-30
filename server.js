@@ -7,6 +7,8 @@ const supabase = createClient(
   process.env.SUPABASE_KEY
 );
 
+
+const crypto = require("crypto");
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -16,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const server = http.createServer(app);
 
@@ -456,5 +459,175 @@ app.get("/", (req, res) => {
 
  
 server.listen(PORT, () => {
+  // ========================================
+// MONEROO - INITIALISER UN PAIEMENT
+// ========================================
+
+app.post("/create-payment", async (req, res) => {
+  try {
+    const {
+      userId,
+      amount,
+      email,
+      first_name,
+      last_name,
+      phone
+    } = req.body;
+
+    if (!userId || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: "userId et amount requis"
+      });
+    }
+
+    const response = await fetch(
+      "https://api.moneroo.io/v1/payments/initialize",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.MONEROO_API_KEY}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({
+          amount,
+          currency: "XOF",
+
+          description: "Recharge portefeuille jeu de dames",
+
+          customer: {
+            email,
+            first_name,
+            last_name,
+            phone
+          },
+
+          return_url:
+            "https://remix-jeu-de-damiers-en-ligne-439782888312.europe-west2.run.app",
+
+          metadata: {
+            userId,
+            amount
+          }
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    console.log("MONEROO RESPONSE:", data);
+
+    return res.json(data);
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+// ========================================
+// MONEROO WEBHOOK
+// ========================================
+
+app.post("/webhook/moneroo", async (req, res) => {
+
+  try {
+
+    console.log(
+      "WEBHOOK RECU:",
+      JSON.stringify(req.body, null, 2)
+    );
+
+    const event = req.body;
+
+    const status =
+      event.status ||
+      event.payment_status ||
+      event.event;
+
+    if (
+      status === "successful" ||
+      status === "success" ||
+      status === "payment.success"
+    ) {
+
+      const userId =
+        event?.metadata?.userId;
+
+      const amount =
+        Number(event?.metadata?.amount || 0);
+
+      if (!userId || amount <= 0) {
+        return res.status(200).json({
+          received: true
+        });
+      }
+
+      const { data: user } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "Utilisateur introuvable"
+        });
+      }
+
+      const newBalance =
+        Number(user.balance) + amount;
+
+      await supabase
+        .from("users")
+        .update({
+          balance: newBalance
+        })
+        .eq("id", userId);
+
+      await supabase
+        .from("transactions")
+        .insert([
+          {
+            user_id: userId,
+            type: "deposit",
+            amount,
+            balance_before: user.balance,
+            balance_after: newBalance,
+            description: "Recharge Moneroo"
+          }
+        ]);
+
+      console.log(
+        "SOLDE AJOUTE:",
+        userId,
+        amount
+      );
+    }
+
+    return res.status(200).json({
+      received: true
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+  
   console.log("Server running on port", PORT);
 });
