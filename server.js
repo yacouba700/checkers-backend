@@ -723,6 +723,12 @@ app.post("/webhook/moneroo", async (req, res) => {
           description: "Retrait Moneroo"
         }
       ]);
+    console.log(
+  "MONEROO PAYOUT RESPONSE:",
+  JSON.stringify(payout, null, 2)
+);
+
+//return res.json(payout);
 
     res.json({
       success: true,
@@ -739,14 +745,9 @@ app.post("/webhook/moneroo", async (req, res) => {
   }
 });
 
-  const payout = await response.json();
+  
 
-console.log(
-  "MONEROO PAYOUT RESPONSE:",
-  JSON.stringify(payout, null, 2)
-);
 
-return res.json(payout);
 /*
   const response = await fetch(
   `https://api.moneroo.io/v1/payouts/${payoutId}`,
