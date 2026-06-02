@@ -738,7 +738,7 @@ app.post("/webhook/moneroo", async (req, res) => {
     });
   }
 });
-
+/*
   const response = await fetch(
   `https://api.moneroo.io/v1/payouts/${payoutId}`,
   {
@@ -748,7 +748,7 @@ app.post("/webhook/moneroo", async (req, res) => {
   }
 );
 
-
+*/
 
 
 
