@@ -671,6 +671,7 @@ app.post("/webhook/moneroo", async (req, res) => {
       .from("users")
       .update({ balance: newBalance })
       .eq("id", userId);
+    console.log("MSISDN ENVOYE :", phone);
 
     // Payout Moneroo
     const response = await fetch(
