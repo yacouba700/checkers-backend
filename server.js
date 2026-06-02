@@ -627,7 +627,132 @@ app.post("/webhook/moneroo", async (req, res) => {
   }
 });
 
+  //=============================
+  // MONOROO PAYOUT 
+  //============================
 
+  app.post("/withdraw", async (req, res) => {
+  try {
+    const {
+      userId,
+      amount,
+      phone,
+      first_name,
+      last_name,
+      email
+    } = req.body;
+
+    // Vérifier utilisateur
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur introuvable"
+      });
+    }
+
+    // Vérifier solde
+    if (user.balance < amount) {
+      return res.status(400).json({
+        success: false,
+        message: "Solde insuffisant"
+      });
+    }
+
+    // Déduire le solde avant envoi
+    const newBalance = user.balance - amount;
+
+    await supabase
+      .from("users")
+      .update({ balance: newBalance })
+      .eq("id", userId);
+
+    // Payout Moneroo
+    const response = await fetch(
+      "https://api.moneroo.io/v1/payouts",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.MONEROO_API_KEY}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({
+          amount,
+          currency: "XOF",
+          description: "Retrait Jeu de Dames",
+
+          // Exemple : Orange Money Mali
+          method: "orange_money_ml",
+
+          customer: {
+            email,
+            first_name,
+            last_name,
+            phone
+          },
+
+          recipient: {
+            msisdn: phone
+          },
+
+          metadata: {
+            userId
+          }
+        })
+      }
+    );
+
+    const payout = await response.json();
+
+    // Enregistrer transaction
+    await supabase
+      .from("transactions")
+      .insert([
+        {
+          user_id: userId,
+          type: "withdraw",
+          amount,
+          balance_before: user.balance,
+          balance_after: newBalance,
+          description: "Retrait Moneroo"
+        }
+      ]);
+
+    res.json({
+      success: true,
+      payout
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+  const response = await fetch(
+  `https://api.moneroo.io/v1/payouts/${payoutId}`,
+  {
+    headers: {
+      Authorization: `Bearer ${process.env.MONEROO_API_KEY}`
+    }
+  }
+);
+
+
+
+
+
+  
   
   console.log("Server running on port", PORT);
 });
