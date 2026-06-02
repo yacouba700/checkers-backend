@@ -689,7 +689,7 @@ app.post("/webhook/moneroo", async (req, res) => {
           description: "Retrait Jeu de Dames",
 
           // Exemple : Orange Money Mali
-          method: "orange_ci",
+          method: "orange_bf",
 
           customer: {
             email,
