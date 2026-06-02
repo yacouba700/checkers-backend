@@ -674,7 +674,7 @@ app.post("/webhook/moneroo", async (req, res) => {
 
     // Payout Moneroo
     const response = await fetch(
-      "https://api.moneroo.io/v1/payouts",
+      "https://api.moneroo.io/v1/payouts/initialize",
       {
         method: "POST",
         headers: {
